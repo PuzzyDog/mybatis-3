@@ -15,6 +15,11 @@
  */
 package org.apache.ibatis.binding;
 
+import org.apache.ibatis.reflection.ExceptionUtil;
+import org.apache.ibatis.session.SqlSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Serializable;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
@@ -23,14 +28,12 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 
-import org.apache.ibatis.reflection.ExceptionUtil;
-import org.apache.ibatis.session.SqlSession;
-
 /**
  * @author Clinton Begin
  * @author Eduardo Macarron
  */
 public class MapperProxy<T> implements InvocationHandler, Serializable {
+  public static final Logger logger = LoggerFactory.getLogger(MapperProxy.class);
 
   private static final long serialVersionUID = -6424540398559729838L;
   private final SqlSession sqlSession;
@@ -38,6 +41,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
   private final Map<Method, MapperMethod> methodCache;
 
   public MapperProxy(SqlSession sqlSession, Class<T> mapperInterface, Map<Method, MapperMethod> methodCache) {
+      logger.info("One Mapper Proxy is constructed. sqlSession.class:" + sqlSession.getClass());
     this.sqlSession = sqlSession;
     this.mapperInterface = mapperInterface;
     this.methodCache = methodCache;
@@ -45,6 +49,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
 
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    logger.info("is invoking, methodName:" + method.getName());
     try {
       if (Object.class.equals(method.getDeclaringClass())) {
         return method.invoke(this, args);

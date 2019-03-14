@@ -15,14 +15,6 @@
  */
 package org.apache.ibatis.executor;
 
-import static org.apache.ibatis.executor.ExecutionPlaceholder.EXECUTION_PLACEHOLDER;
-
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.cache.impl.PerpetualCache;
 import org.apache.ibatis.cursor.Cursor;
@@ -30,11 +22,7 @@ import org.apache.ibatis.executor.statement.StatementUtil;
 import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
 import org.apache.ibatis.logging.jdbc.ConnectionLogger;
-import org.apache.ibatis.mapping.BoundSql;
-import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.ParameterMapping;
-import org.apache.ibatis.mapping.ParameterMode;
-import org.apache.ibatis.mapping.StatementType;
+import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.session.Configuration;
@@ -43,11 +31,22 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.type.TypeHandlerRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import static org.apache.ibatis.executor.ExecutionPlaceholder.EXECUTION_PLACEHOLDER;
 
 /**
  * @author Clinton Begin
  */
 public abstract class BaseExecutor implements Executor {
+    public static final Logger logger = LoggerFactory.getLogger(BaseExecutor.class);
 
   private static final Log log = LogFactory.getLog(BaseExecutor.class);
 
@@ -132,6 +131,7 @@ public abstract class BaseExecutor implements Executor {
   @Override
   public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
     BoundSql boundSql = ms.getBoundSql(parameter);
+    logger.info("id:{}, sql:{}, paraMapping:{}, paramObj:{}", ms.getId(), boundSql.getSql(), boundSql.getParameterMappings(), boundSql.getParameterObject());
     CacheKey key = createCacheKey(ms, parameter, rowBounds, boundSql);
     return query(ms, parameter, rowBounds, resultHandler, key, boundSql);
  }
@@ -323,6 +323,7 @@ public abstract class BaseExecutor implements Executor {
     List<E> list;
     localCache.putObject(key, EXECUTION_PLACEHOLDER);
     try {
+      logger.info("BaseExecutor, try to query from db. classType:" + this.getClass());
       list = doQuery(ms, parameter, rowBounds, resultHandler, boundSql);
     } finally {
       localCache.removeObject(key);

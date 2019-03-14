@@ -15,15 +15,6 @@
  */
 package org.apache.ibatis.session.defaults;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.ibatis.binding.BindingException;
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.exceptions.ExceptionFactory;
@@ -38,6 +29,13 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.*;
 
 /**
  *
@@ -47,6 +45,7 @@ import org.apache.ibatis.session.SqlSession;
  * @author Clinton Begin
  */
 public class DefaultSqlSession implements SqlSession {
+  public static final Logger logger = LoggerFactory.getLogger(DefaultSqlSession.class);
 
   private final Configuration configuration;
   private final Executor executor;
@@ -145,6 +144,7 @@ public class DefaultSqlSession implements SqlSession {
   public <E> List<E> selectList(String statement, Object parameter, RowBounds rowBounds) {
     try {
       MappedStatement ms = configuration.getMappedStatement(statement);
+      logger.info("selectList, mappedStatement, dataBaseId:{}, executor'TYPE:{}", ms.getDatabaseId(), executor.getClass());
       return executor.query(ms, wrapCollection(parameter), rowBounds, Executor.NO_RESULT_HANDLER);
     } catch (Exception e) {
       throw ExceptionFactory.wrapException("Error querying database.  Cause: " + e, e);

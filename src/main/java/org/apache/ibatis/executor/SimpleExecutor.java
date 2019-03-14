@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2016 the original author or authors.
+ *    Copyright 2009-2018 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -57,6 +57,7 @@ public class SimpleExecutor extends BaseExecutor {
   public <E> List<E> doQuery(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
     Statement stmt = null;
     try {
+      //BoundSQL已经是经过符号化的sql语句，即其中的#{}等符号已变成?
       Configuration configuration = ms.getConfiguration();
       StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);
       stmt = prepareStatement(handler, ms.getStatementLog());
@@ -82,7 +83,7 @@ public class SimpleExecutor extends BaseExecutor {
   private Statement prepareStatement(StatementHandler handler, Log statementLog) throws SQLException {
     Statement stmt;
     Connection connection = getConnection(statementLog);
-    stmt = handler.prepare(connection, transaction.getTimeout());
+    stmt = handler.prepare(connection, transaction.getTimeout()); //预编译语句，可以直接将待占位符的sql语句预编译
     handler.parameterize(stmt);
     return stmt;
   }
