@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2018 the original author or authors.
+ *    Copyright 2009-2019 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -15,6 +15,15 @@
  */
 package org.apache.ibatis.binding;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.apache.ibatis.annotations.Flush;
 import org.apache.ibatis.annotations.MapKey;
 import org.apache.ibatis.cursor.Cursor;
@@ -28,17 +37,6 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Array;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * @author Clinton Begin
@@ -47,7 +45,6 @@ import java.util.Optional;
  * @author Kazuki Shimizu
  */
 public class MapperMethod {
-  public static final Logger logger = LoggerFactory.getLogger(MapperMethod.class);
 
   private final SqlCommand command;
   private final MethodSignature method;
@@ -55,15 +52,13 @@ public class MapperMethod {
   public MapperMethod(Class<?> mapperInterface, Method method, Configuration config) {
     this.command = new SqlCommand(config, mapperInterface, method);
     this.method = new MethodSignature(config, mapperInterface, method);
-
-    logger.info("a MapperMethod constructed, mapperInterface:{}, command:{}, method.declareClass:{}", mapperInterface, command.name + "," + command.type, method.getDeclaringClass());
   }
 
   public Object execute(SqlSession sqlSession, Object[] args) {
     Object result;
     switch (command.getType()) {
       case INSERT: {
-    	Object param = method.convertArgsToSqlCommandParam(args);
+        Object param = method.convertArgsToSqlCommandParam(args);
         result = rowCountResult(sqlSession.insert(command.getName(), param));
         break;
       }
@@ -79,24 +74,19 @@ public class MapperMethod {
       }
       case SELECT:
         if (method.returnsVoid() && method.hasResultHandler()) {
-          logger.info("method:{}, SELECT, returnType:{}", method, void.class);
           executeWithResultHandler(sqlSession, args);
           result = null;
         } else if (method.returnsMany()) {
-          logger.info("method:{}, SELECT, returnType:{}", method, "Many");
           result = executeForMany(sqlSession, args);
         } else if (method.returnsMap()) {
-          logger.info("method:{}, SELECT, returnType:{}", method, "Map");
           result = executeForMap(sqlSession, args);
         } else if (method.returnsCursor()) {
-          logger.info("method:{}, SELECT, returnType:{}", method, "Cursor");
           result = executeForCursor(sqlSession, args);
         } else {
-          logger.info("method:{}, SELECT, returnType:{}", method, "SELECT_ONE");
           Object param = method.convertArgsToSqlCommandParam(args);
           result = sqlSession.selectOne(command.getName(), param);
-          if (method.returnsOptional() &&
-              (result == null || !method.getReturnType().equals(result.getClass()))) {
+          if (method.returnsOptional()
+              && (result == null || !method.getReturnType().equals(result.getClass()))) {
             result = Optional.ofNullable(result);
           }
         }
@@ -108,7 +98,7 @@ public class MapperMethod {
         throw new BindingException("Unknown execution method for: " + command.getName());
     }
     if (result == null && method.getReturnType().isPrimitive() && !method.returnsVoid()) {
-      throw new BindingException("Mapper method '" + command.getName() 
+      throw new BindingException("Mapper method '" + command.getName()
           + " attempted to return null from a method with a primitive return type (" + method.getReturnType() + ").");
     }
     return result;
@@ -134,8 +124,8 @@ public class MapperMethod {
     MappedStatement ms = sqlSession.getConfiguration().getMappedStatement(command.getName());
     if (!StatementType.CALLABLE.equals(ms.getStatementType())
         && void.class.equals(ms.getResultMaps().get(0).getType())) {
-      throw new BindingException("method " + command.getName() 
-          + " needs either a @ResultMap annotation, a @ResultType annotation," 
+      throw new BindingException("method " + command.getName()
+          + " needs either a @ResultMap annotation, a @ResultType annotation,"
           + " or a resultType attribute in XML so a ResultHandler can be used as a parameter.");
     }
     Object param = method.convertArgsToSqlCommandParam(args);
@@ -152,9 +142,9 @@ public class MapperMethod {
     Object param = method.convertArgsToSqlCommandParam(args);
     if (method.hasRowBounds()) {
       RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<E>selectList(command.getName(), param, rowBounds);
+      result = sqlSession.selectList(command.getName(), param, rowBounds);
     } else {
-      result = sqlSession.<E>selectList(command.getName(), param);
+      result = sqlSession.selectList(command.getName(), param);
     }
     // issue #510 Collections & arrays support
     if (!method.getReturnType().isAssignableFrom(result.getClass())) {
@@ -172,9 +162,9 @@ public class MapperMethod {
     Object param = method.convertArgsToSqlCommandParam(args);
     if (method.hasRowBounds()) {
       RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<T>selectCursor(command.getName(), param, rowBounds);
+      result = sqlSession.selectCursor(command.getName(), param, rowBounds);
     } else {
-      result = sqlSession.<T>selectCursor(command.getName(), param);
+      result = sqlSession.selectCursor(command.getName(), param);
     }
     return result;
   }
@@ -194,7 +184,7 @@ public class MapperMethod {
       for (int i = 0; i < list.size(); i++) {
         Array.set(array, i, list.get(i));
       }
-    return array;
+      return array;
     } else {
       return list.toArray((E[])array);
     }
@@ -205,9 +195,9 @@ public class MapperMethod {
     Object param = method.convertArgsToSqlCommandParam(args);
     if (method.hasRowBounds()) {
       RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<K, V>selectMap(command.getName(), param, method.getMapKey(), rowBounds);
+      result = sqlSession.selectMap(command.getName(), param, method.getMapKey(), rowBounds);
     } else {
-      result = sqlSession.<K, V>selectMap(command.getName(), param, method.getMapKey());
+      result = sqlSession.selectMap(command.getName(), param, method.getMapKey());
     }
     return result;
   }
@@ -237,7 +227,7 @@ public class MapperMethod {
       MappedStatement ms = resolveMappedStatement(mapperInterface, methodName, declaringClass,
           configuration);
       if (ms == null) {
-        if(method.getAnnotation(Flush.class) != null){
+        if (method.getAnnotation(Flush.class) != null) {
           name = null;
           type = SqlCommandType.FLUSH;
         } else {
@@ -265,13 +255,10 @@ public class MapperMethod {
         Class<?> declaringClass, Configuration configuration) {
       String statementId = mapperInterface.getName() + "." + methodName;
       if (configuration.hasStatement(statementId)) {
-        logger.info("when resolveMappedStatement, hasStatement:{}", statementId);
         return configuration.getMappedStatement(statementId);
       } else if (mapperInterface.equals(declaringClass)) {
-          logger.info("when resolveMappedStatement, mapperInterface.equals(declaringClass)");
         return null;
       }
-      logger.info("when resolveMappedStatement, mapperInterface.notEquals(declaringClass)");
       for (Class<?> superInterface : mapperInterface.getInterfaces()) {
         if (declaringClass.isAssignableFrom(superInterface)) {
           MappedStatement ms = resolveMappedStatement(superInterface, methodName,
@@ -318,11 +305,8 @@ public class MapperMethod {
       this.paramNameResolver = new ParamNameResolver(configuration, method);
     }
 
-    //一个Map类型， key为参数名称， value为对应的值
     public Object convertArgsToSqlCommandParam(Object[] args) {
-      Object obj =  paramNameResolver.getNamedParams(args);
-      logger.info("NamedParams:" + obj);
-      return obj;
+      return paramNameResolver.getNamedParams(args);
     }
 
     public boolean hasRowBounds() {
@@ -366,7 +350,7 @@ public class MapperMethod {
     }
 
     /**
-     * return whether return type is {@code java.util.Optional}
+     * return whether return type is {@code java.util.Optional}.
      * @return return {@code true}, if return type is {@code java.util.Optional}
      * @since 3.5.0
      */
